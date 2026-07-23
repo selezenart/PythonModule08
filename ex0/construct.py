@@ -3,15 +3,15 @@ import sys
 import site
 
 
-def in_virtual_environment():
+def in_virtual_environment() -> bool:
     if os.environ.get("VIRTUAL_ENV"):
         return True
     return sys.prefix != getattr(sys, "base_prefix", sys.prefix)
 
 
-def package_path():
+def package_path() -> str:
     try:
-        paths = site.getsitepackages()
+        paths: list[str] = site.getsitepackages()
         if paths:
             return paths[0]
     except AttributeError:
@@ -19,7 +19,7 @@ def package_path():
     return site.getusersitepackages()
 
 
-def show_plugged_in():
+def show_plugged_in() -> None:
     print("MATRIX STATUS: You're still plugged in")
     print("Current Python: " + sys.executable)
     print("Virtual Environment: None detected")
@@ -35,9 +35,9 @@ def show_plugged_in():
     print("Then run this program again.")
 
 
-def show_in_construct():
-    env_path = os.environ.get("VIRTUAL_ENV", sys.prefix)
-    env_name = os.path.basename(env_path)
+def show_in_construct() -> None:
+    env_path: str = os.environ.get("VIRTUAL_ENV", sys.prefix)
+    env_name: str = os.path.basename(env_path)
     print("MATRIX STATUS: Welcome to the construct")
     print("Current Python: " + sys.executable)
     print("Virtual Environment: " + env_name)
@@ -51,7 +51,7 @@ def show_in_construct():
     print(package_path())
 
 
-def main():
+def main() -> None:
     if in_virtual_environment():
         show_in_construct()
     else:
