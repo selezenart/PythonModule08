@@ -1,0 +1,7 @@
+# Never commit real secrets. .env holds live credentials (API_KEY, DATABASE_URL).
+# Only .env.example (placeholders) is tracked.
+.env
+
+# Python
+__pycache__/
+*.pyc
