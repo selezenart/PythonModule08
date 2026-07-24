@@ -1,0 +1,6 @@
+matrix_env/
+.venv/
+__pycache__/
+*.pyc
+matrix_analysis.png
+poetry.lock

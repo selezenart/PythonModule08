@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "matrix-loading"
+version = "0.1.0"
+description = "Matrix data analysis - pip vs Poetry dependency management"
+authors = ["selezenart <artvs14@gmail.com>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.11,<4.0"
+numpy = ">=2.1"
+pandas = ">=2.2"
+matplotlib = ">=3.9"
+
+[build-system]
+requires = ["poetry-core>=1.9"]
+build-backend = "poetry.core.masonry.api"
