@@ -1,7 +1,7 @@
 import os
 import sys
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # type: ignore[import-not-found]
 
 
 CONFIG_KEYS: list[tuple[str, str]] = [

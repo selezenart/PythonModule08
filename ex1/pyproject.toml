@@ -2,7 +2,7 @@
 name = "matrix-loading"
 version = "0.1.0"
 description = "Matrix data analysis - pip vs Poetry dependency management"
-authors = ["selezenart <artvs14@gmail.com>"]
+authors = ["aselezen <aselezen@student.42heilbronn.de"]
 package-mode = false
 
 [tool.poetry.dependencies]

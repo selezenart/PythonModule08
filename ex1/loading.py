@@ -8,9 +8,9 @@ if TYPE_CHECKING:
 
 
 DEPENDENCIES: dict[str, str] = {
-    "pandas": "Data manipulation ready",
-    "numpy": "Numerical computation ready",
-    "matplotlib": "Visualization ready",
+    "pandas": "Data manipulation",
+    "numpy": "Numerical computation",
+    "matplotlib": "Visualization",
 }
 
 DATA_POINTS: int = 1000
@@ -33,9 +33,9 @@ def check_dependencies() -> list[str]:
         version = package_version(name)
         if version is None:
             missing.append(name)
-            print("[KO] " + name + " (not installed) - " + role)
+            print("[KO] " + name + " (not installed) - " + role + " not ready")
         else:
-            print("[OK] " + name + " (" + version + ") - " + role)
+            print("[OK] " + name + " (" + version + ") - " + role + " ready")
     return missing
 
 
@@ -80,7 +80,7 @@ def generate_matrix_data() -> "pd.DataFrame":
     import numpy as np
     import pandas as pd
 
-    rng = np.random.default_rng(42)
+    rng = np.random.default_rng()
     sectors = np.array(["Zion", "Nebuchadnezzar", "Construct", "Loop"])
     activity_bias = np.array([-6.0, 2.0, 9.0, 18.0])
     anomaly_rate = np.array([1.5, 2.5, 3.5, 6.0])
