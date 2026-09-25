@@ -81,7 +81,7 @@ def generate_matrix_data() -> "pd.DataFrame":
     import pandas as pd
 
     rng = np.random.default_rng()
-    sectors = np.array(["Zion", "Nebuchadnezzar", "Construct", "Loop"])
+    sectors = np.array(["Sector 1", "Sector 2", "Sector 3", "Sector 4"])
     activity_bias = np.array([-6.0, 2.0, 9.0, 18.0])
     anomaly_rate = np.array([1.5, 2.5, 3.5, 6.0])
     index = rng.integers(0, sectors.size, size=DATA_POINTS)
@@ -140,14 +140,16 @@ def visualize(frame: "pd.DataFrame", summary: "pd.DataFrame") -> None:
     bottom_left.tick_params(axis="x", rotation=20)
 
     bottom_right = axes[1][1]
-    bottom_right.scatter(
-        frame["code_density"],
-        frame["agent_activity"],
-        c=frame["glitch"].map({True: "#ff0033", False: "#008f11"}),
-        s=10,
-        alpha=0.6,
-    )
-    bottom_right.set_title("Density vs activity (red = glitch)")
+    for sector, group in frame.groupby("sector"):
+        bottom_right.scatter(
+            group["code_density"],
+            group["agent_activity"],
+            label=sector,
+            s=10,
+            alpha=0.6,
+        )
+    bottom_right.legend(title="sector", fontsize=8)
+    bottom_right.set_title("Density vs activity by sector")
     bottom_right.set_xlabel("code density")
     bottom_right.set_ylabel("agent activity")
 
