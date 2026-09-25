@@ -53,27 +53,109 @@ def print_install_instructions(missing: list[str]) -> None:
     print("    poetry run python loading.py")
 
 
+def detect_manager() -> str:
+    if "pypoetry" in sys.prefix:
+        return "Poetry virtual env (" + sys.prefix + ")"
+    if sys.prefix != sys.base_prefix:
+        return "pip virtual env (" + sys.prefix + ")"
+    return "global Python, no virtual env (" + sys.prefix + ")"
+
+
+def read_file_lines(path: str) -> list[str]:
+    try:
+        with open(path) as file:
+            return file.read().splitlines()
+    except OSError:
+        return []
+
+
+def read_requirements() -> dict[str, str]:
+    rules: dict[str, str] = {}
+    for line in read_file_lines("requirements.txt"):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        cut = len(line)
+        for sign in "<>=!~":
+            position = line.find(sign)
+            if position != -1 and position < cut:
+                cut = position
+        rules[line[:cut].strip()] = line[cut:].strip()
+    return rules
+
+
+def marker_matches(marker: str) -> bool:
+    parts = marker.replace('\\"', "").split()
+    if len(parts) != 3 or parts[0] != "python_version":
+        return True
+    wanted = int(parts[2].split(".")[1])
+    current = sys.version_info.minor
+    if parts[1] == "==":
+        return current == wanted
+    if parts[1] == ">=":
+        return current >= wanted
+    if parts[1] == "<":
+        return current < wanted
+    return True
+
+
+def read_poetry_lock() -> dict[str, str]:
+    locked: dict[str, str] = {}
+    name = ""
+    version = ""
+    marker = ""
+    for line in read_file_lines("poetry.lock") + ["[[package]]"]:
+        if line == "[[package]]":
+            if name and marker_matches(marker):
+                locked[name] = version
+            name = version = marker = ""
+        elif line.startswith("name = "):
+            name = line.split('"')[1]
+        elif line.startswith("version = "):
+            version = line.split('"')[1]
+        elif line.startswith("markers = "):
+            marker = line[len('markers = "'):-1]
+    return locked
+
+
 def compare_dependency_managers() -> None:
     print()
     print("PIP vs POETRY:")
-    print("  installed versions right now:")
+    print("  running in: " + detect_manager())
+    print()
+    rules = read_requirements()
+    locked = read_poetry_lock()
+    print(
+        "  " + "package".ljust(12) + "rule".ljust(10)
+        + "poetry.lock".ljust(14) + "installed here"
+    )
     for name in DEPENDENCIES:
+        rule = rules.get(name, "?")
         version = package_version(name)
-        label = version if version is not None else "missing"
-        print("    " + name.ljust(12) + label)
+        installed = version if version is not None else "missing"
+        lock = locked.get(name, "no lock")
+        print(
+            "  " + name.ljust(12) + rule.ljust(10)
+            + lock.ljust(14) + installed
+        )
+    if not locked:
+        print("  (no poetry.lock yet: run 'poetry install' to create it)")
+    print()
+    print("  pip installs the newest version that matches the rule,")
+    print("  so the result depends on the day you install.")
+    print("  Poetry installs exactly what poetry.lock says,")
+    print("  so every machine gets the same versions.")
     print()
     rows: list[tuple[str, str, str]] = [
-        ("manifest", "requirements.txt", "pyproject.toml"),
-        ("lock file", "none by default", "poetry.lock"),
-        ("versions", "flat pinned list", "solved constraints"),
-        ("resolver", "first fit, no backtrack", "full SAT solver"),
-        ("environment", "you create the venv", "Poetry creates it"),
-        ("dev extras", "second requirements file", "dependency groups"),
-        ("run command", "python3 loading.py", "poetry run python ..."),
+        ("dependency file", "requirements.txt", "pyproject.toml"),
+        ("lock file", "none", "poetry.lock (exact versions)"),
+        ("virtual env", "you create and activate", "Poetry creates it"),
+        ("install", "pip install -r requirements.txt", "poetry install"),
+        ("run", "python3 loading.py", "poetry run python loading.py"),
     ]
-    print("  " + "topic".ljust(12) + "pip".ljust(26) + "poetry")
+    print("  " + "topic".ljust(17) + "pip".ljust(33) + "poetry")
     for topic, pip_side, poetry_side in rows:
-        print("  " + topic.ljust(12) + pip_side.ljust(26) + poetry_side)
+        print("  " + topic.ljust(17) + pip_side.ljust(33) + poetry_side)
 
 
 def generate_matrix_data() -> "pd.DataFrame":
@@ -81,77 +163,27 @@ def generate_matrix_data() -> "pd.DataFrame":
     import pandas as pd
 
     rng = np.random.default_rng()
-    sectors = np.array(["Sector 1", "Sector 2", "Sector 3", "Sector 4"])
-    activity_bias = np.array([-6.0, 2.0, 9.0, 18.0])
-    anomaly_rate = np.array([1.5, 2.5, 3.5, 6.0])
-    index = rng.integers(0, sectors.size, size=DATA_POINTS)
     frame = pd.DataFrame(
-        {
-            "cycle": np.arange(DATA_POINTS),
-            "sector": sectors[index],
-            "agent_activity": (
-                rng.normal(50.0, 10.0, DATA_POINTS) + activity_bias[index]
-            ),
-            "code_density": rng.gamma(2.0, 8.0, DATA_POINTS),
-            "anomalies": rng.poisson(anomaly_rate[index]),
-        }
+        {"signal": rng.uniform(0.0, 100.0, DATA_POINTS)}
     )
-    frame["glitch"] = frame["anomalies"] > 5
     return frame
 
 
 def analyze(frame: "pd.DataFrame") -> "pd.DataFrame":
-    summary = frame.groupby("sector").agg(
-        mean_activity=("agent_activity", "mean"),
-        mean_density=("code_density", "mean"),
-        glitch_rate=("glitch", "mean"),
-    )
-    return summary.sort_values("mean_activity", ascending=False)
+    return frame.describe()
 
 
-def visualize(frame: "pd.DataFrame", summary: "pd.DataFrame") -> None:
+def visualize(frame: "pd.DataFrame") -> None:
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    fig, axes = plt.subplots(2, 2, figsize=(12, 9))
-    fig.suptitle("Matrix Data Analysis", fontsize=16)
-
-    top_left = axes[0][0]
-    top_left.hist(frame["agent_activity"], bins=40, color="#00ff41")
-    top_left.set_title("Agent activity distribution")
-    top_left.set_xlabel("activity")
-    top_left.set_ylabel("count")
-
-    top_right = axes[0][1]
-    rolling = frame["code_density"].rolling(window=25).mean()
-    top_right.plot(frame["cycle"], rolling, color="#00ff41")
-    top_right.set_title("Code density (25-cycle rolling mean)")
-    top_right.set_xlabel("cycle")
-    top_right.set_ylabel("density")
-
-    bottom_left = axes[1][0]
-    bottom_left.bar(
-        summary.index, summary["mean_activity"], color="#008f11"
-    )
-    bottom_left.set_title("Mean agent activity per sector")
-    bottom_left.set_ylabel("activity")
-    bottom_left.tick_params(axis="x", rotation=20)
-
-    bottom_right = axes[1][1]
-    for sector, group in frame.groupby("sector"):
-        bottom_right.scatter(
-            group["code_density"],
-            group["agent_activity"],
-            label=sector,
-            s=10,
-            alpha=0.6,
-        )
-    bottom_right.legend(title="sector", fontsize=8)
-    bottom_right.set_title("Density vs activity by sector")
-    bottom_right.set_xlabel("code density")
-    bottom_right.set_ylabel("agent activity")
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.hist(frame["signal"], bins=20, color="#00ff41")
+    ax.set_title("Matrix signal distribution")
+    ax.set_xlabel("signal")
+    ax.set_ylabel("count")
 
     fig.tight_layout()
     fig.savefig(OUTPUT_FILE, dpi=120)
@@ -168,7 +200,7 @@ def run_analysis() -> None:
     print(summary.round(2).to_string())
     print()
     print("Generating visualization...")
-    visualize(frame, summary)
+    visualize(frame)
     print("Analysis complete!")
     print("Results saved to: " + OUTPUT_FILE)
 
