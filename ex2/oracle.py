@@ -1,7 +1,15 @@
 import os
 import sys
 
-from dotenv import load_dotenv  # type: ignore[import-not-found]
+try:
+    from dotenv import load_dotenv  # type: ignore[import-not-found]
+except ImportError:
+    print("ORACLE STATUS: python-dotenv is not installed.")
+    print("Install it inside a virtual environment:")
+    print("    python3 -m venv matrix_env")
+    print("    source matrix_env/bin/activate")
+    print("    pip install python-dotenv")
+    sys.exit(1)
 
 
 CONFIG_KEYS: list[tuple[str, str]] = [
